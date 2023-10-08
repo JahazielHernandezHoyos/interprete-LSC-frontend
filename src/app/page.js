@@ -1,23 +1,21 @@
-'use client'
+"use client";
 import { useEffect, useRef, useState } from 'react'
-import { DrawingUtils, GestureRecognizer, FilesetResolver } from '@mediapipe/tasks-vision';
 
 export default function Home() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const enableWebcamButtonRef = useRef(null);
-  const [output, setOutput] = useState(null); // Añade un estado para el output
 
   // Variables para el modelo de mediapipe con el canvas
   let lastVideoTime = -1;
-  let results = undefined;
-  let gestureRecognizer = undefined;
 
   useEffect(() => {
+    async function loadAndUseMediapipe() {
+      const { GestureRecognizer, FilesetResolver} = await import('@mediapipe/tasks-vision');
+    }
+    loadAndUseMediapipe();
     const video = videoRef.current;
     const enableWebcamButton = enableWebcamButtonRef.current;
-    const canvasElement = canvasRef.current;
-    const canvasCtx = canvasElement.getContext('2d');
 
     // Verifica si el acceso a la webcam es compatible
     function hasGetUserMedia() {
@@ -36,56 +34,40 @@ export default function Home() {
       const constraints = { video: true };
       navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
         video.srcObject = stream;
-        predictWebcam();
       });
     }
 
-    // Función para dibujar el resultado del modelo en el canvas
-    function drawResults(results) {
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      if (results && results.image instanceof HTMLImageElement) {
-        canvasCtx.drawImage(
-          results.image,
-          0,
-          0,
-          canvasElement.width,
-          canvasElement.height
-        );
-        setOutput(results); // Actualiza el estado del output con los resultados
-      }
-      canvasCtx.restore();
-    }
-
-    async function predictWebcam() {
-      // Aquí deberías obtener los resultados del modelo
-      let nowInMs = Date.now();
-      if (video.currentTime !== lastVideoTime && video.readyState === 4) {
-        lastVideoTime = video.currentTime;
-        results = gestureRecognizer.recognizeForVideo(video, nowInMs);
-      }
-      if (results) {
-        drawResults(results);
-      }
-      // Llama a esta función nuevamente para seguir prediciendo cuando el navegador esté listo.
-      window.requestAnimationFrame(predictWebcam);
-    }
-
-    // Crear el gestureRecognizer
-    const createGestureRecognizer = async () => {
+    // Mediapipe result
+    // Create task for image file processing:
+    async function mediapipeResults() {
       const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+        // path/to/wasm/root
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm "
       );
-      gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+      const gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
-          delegate: "GPU"
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-tasks/gesture_recognizer/gesture_recognizer.task"
         },
-        runningMode: "VIDEO"
+        numHands: 2
       });
-    };
-    createGestureRecognizer();
+
+      await gestureRecognizer.setOptions({ runningMode: "video" });
+
+      function renderLoop() {
+        const video = video.current;
+
+        if (video.currentTime !== lastVideoTime) {
+          const gestureRecognitionResult = gestureRecognizer.recognizeForVideo(video);
+          processResult(gestureRecognitionResult);
+          console.log(gestureRecognitionResult);
+          lastVideoTime = video.currentTime;
+        }
+
+        requestAnimationFrame(() => {
+          renderLoop();
+        });
+      }
+    }
 
   }, []);
 
@@ -117,7 +99,7 @@ export default function Home() {
       </div>
 
       <h2 className="text-center"> Output: </h2>
-      <div>{output ? JSON.stringify(output) : 'No hay output'}</div> {/* Muestra el output aquí */}
+      {/* <div>{output ? JSON.stringify(output) : 'No hay output'}</div> Muestra el output aquí */}
     </>
   )
 }
