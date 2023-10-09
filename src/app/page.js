@@ -109,10 +109,10 @@ export default function Home() {
       </div>
 
       <div className="m-4 flex justify-center items-center">
-        {gestureRecognitionResult == null ? <p className="text-center">No se detectó ninguna seña, muéstrame tu mano 🤘, y espera un momento</p> :
+        {gestureRecognitionResult == null ? <p className="text-center text-white">No se detectó ninguna seña, muéstrame tu mano 🤘, y espera un momento</p> :
           (gestureRecognitionResult.gestures && gestureRecognitionResult.gestures[0] && gestureRecognitionResult.gestures[0][0] ?
-            <h2 className="text-center">Resultado de la predicción: {gestureRecognitionResult.gestures[0][0].categoryName}</h2> :
-            <h2 className="text-center">No se detectó ninguna seña</h2>)}
+            <h2 className="text-center text-white">Resultado de la predicción: {gestureRecognitionResult.gestures[0][0].categoryName}</h2> :
+            <h2 className="text-center text-white">No se detectó ninguna seña</h2>)}
       </div>
     </>
   )
