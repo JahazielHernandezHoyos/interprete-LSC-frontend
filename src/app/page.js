@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { GestureRecognizer, FilesetResolver } from '@mediapipe/tasks-vision';
+let GestureRecognizer, FilesetResolver;
+if (typeof window !== 'undefined') {
+  import('@mediapipe/tasks-vision')
+    .then(module => {
+      GestureRecognizer = module.GestureRecognizer;
+      FilesetResolver = module.FilesetResolver;
+    });
+}
 
 /**
  * Componente principal de la página de inicio.
@@ -103,11 +110,10 @@ export default function Home() {
 
       <div className="m-4 flex justify-center items-center">
         {gestureRecognitionResult == null ? <h2 className="text-center">No se detectó ninguna seña</h2> :
-        (gestureRecognitionResult.gestures && gestureRecognitionResult.gestures[0] && gestureRecognitionResult.gestures[0][0] ?
-        <h2 className="text-center">Resultado de la predicción: {gestureRecognitionResult.gestures[0][0].categoryName}</h2> :
-        <h2 className="text-center">No se detectó ninguna seña</h2>)}
+          (gestureRecognitionResult.gestures && gestureRecognitionResult.gestures[0] && gestureRecognitionResult.gestures[0][0] ?
+            <h2 className="text-center">Resultado de la predicción: {gestureRecognitionResult.gestures[0][0].categoryName}</h2> :
+            <h2 className="text-center">No se detectó ninguna seña</h2>)}
       </div>
     </>
   )
 }
-
