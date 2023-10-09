@@ -85,7 +85,7 @@ export default function Home() {
   return (
     <>
       <h1 className="m-10 text-center bg-gradient-to-r from-green-300 via-blue-500 to-purple-600 bg-clip-text text-3xl font-extrabold text-transparent sm:text-5xl">
-        Demo interprete de seña (MEDIAPIPE)
+        Demo intérprete de seña (MEDIAPIPE)
       </h1>
 
       <div className="m-4 flex justify-center items-center">
