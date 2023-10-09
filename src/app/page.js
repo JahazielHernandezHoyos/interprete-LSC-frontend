@@ -96,6 +96,7 @@ export default function Home() {
         <button
           className="group relative inline-block overflow-hidden border border-indigo-600 px-8 py-3 focus:outline-none focus:ring"
           ref={enableWebcamButtonRef}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
         >
           <span
             className="absolute inset-x-0 bottom-0 h-[2px] bg-indigo-600 transition-all group-hover:h-full group-active:bg-indigo-500"
