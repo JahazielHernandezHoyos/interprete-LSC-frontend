@@ -1,74 +1,78 @@
 "use client";
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react';
+import { GestureRecognizer, FilesetResolver } from '@mediapipe/tasks-vision';
 
+/**
+ * Componente principal de la página de inicio.
+ */
 export default function Home() {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const enableWebcamButtonRef = useRef(null);
+  const webcamRunning = useRef(false);
+  const [gestureRecognitionResult, setGestureRecognitionResult] = useState(null);
 
-  // Variables para el modelo de mediapipe con el canvas
-  let lastVideoTime = -1;
+  let lastVideoTime = useRef(-1);
 
+  /**
+   * Efecto para inicializar la webcam y el reconocimiento de gestos.
+   */
   useEffect(() => {
-    async function loadAndUseMediapipe() {
-      const { GestureRecognizer, FilesetResolver} = await import('@mediapipe/tasks-vision');
-    }
-    loadAndUseMediapipe();
     const video = videoRef.current;
     const enableWebcamButton = enableWebcamButtonRef.current;
 
-    // Verifica si el acceso a la webcam es compatible
-    function hasGetUserMedia() {
-      return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-    }
-
-    // Si la webcam es compatible, agrega un event listener al botón
-    if (hasGetUserMedia()) {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       enableWebcamButton.addEventListener("click", enableCam);
     } else {
       console.warn("getUserMedia() no es compatible con tu navegador");
     }
 
-    // Activa la vista de la webcam en vivo
     function enableCam() {
+      if (webcamRunning.current) {
+        return;
+      }
       const constraints = { video: true };
       navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
         video.srcObject = stream;
+        webcamRunning.current = true;
+        mediapipeResults();
       });
     }
 
-    // Mediapipe result
-    // Create task for image file processing:
     async function mediapipeResults() {
       const vision = await FilesetResolver.forVisionTasks(
-        // path/to/wasm/root
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm "
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
       );
       const gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: "https://storage.googleapis.com/mediapipe-tasks/gesture_recognizer/gesture_recognizer.task"
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
+          delegate: "GPU"
         },
-        numHands: 2
+        runningMode: "IMAGE",
       });
+      await gestureRecognizer.setOptions({ runningMode: "VIDEO" });
 
-      await gestureRecognizer.setOptions({ runningMode: "video" });
-
-      function renderLoop() {
-        const video = video.current;
-
-        if (video.currentTime !== lastVideoTime) {
-          const gestureRecognitionResult = gestureRecognizer.recognizeForVideo(video);
-          processResult(gestureRecognitionResult);
-          console.log(gestureRecognitionResult);
-          lastVideoTime = video.currentTime;
-        }
-
-        requestAnimationFrame(() => {
-          renderLoop();
-        });
-      }
+      renderLoop(gestureRecognizer, video);
     }
 
+    function renderLoop(gestureRecognizer, video) {
+      if (!webcamRunning.current) {
+        return;
+      }
+      let nowInMs = Date.now();
+      if (video.currentTime !== lastVideoTime.current) {
+        const gestureRecognitionResult = gestureRecognizer.recognizeForVideo(video, nowInMs);
+        if (gestureRecognitionResult || gestureRecognitionResult == null) {
+          setGestureRecognitionResult(gestureRecognitionResult);
+        } else {
+          setGestureRecognitionResult("");
+        }
+        lastVideoTime.current = video.currentTime;
+        console.log("DETECCION?", gestureRecognitionResult)
+      }
+      requestAnimationFrame(() => {
+        renderLoop(gestureRecognizer, video);
+      });
+    }
   }, []);
 
   return (
@@ -78,8 +82,7 @@ export default function Home() {
       </h1>
 
       <div className="m-4 flex justify-center items-center">
-        <video ref={videoRef} autoPlay playsInline style={{ width: '100%', maxHeight: '70vh' }}></video>
-        <canvas ref={canvasRef} style={{ width: '100%', maxHeight: '70vh' }}></canvas>
+        <video ref={videoRef} autoPlay playsInline style={{ width: '480px', height: '360px' }}></video>
       </div>
 
       <div className="m-4 flex justify-center items-center">
@@ -98,8 +101,13 @@ export default function Home() {
         </button>
       </div>
 
-      <h2 className="text-center"> Output: </h2>
-      {/* <div>{output ? JSON.stringify(output) : 'No hay output'}</div> Muestra el output aquí */}
+      <div className="m-4 flex justify-center items-center">
+        {gestureRecognitionResult == null ? <h2 className="text-center">No se detectó ninguna seña</h2> :
+        (gestureRecognitionResult.gestures && gestureRecognitionResult.gestures[0] && gestureRecognitionResult.gestures[0][0] ?
+        <h2 className="text-center">Resultado de la predicción: {gestureRecognitionResult.gestures[0][0].categoryName}</h2> :
+        <h2 className="text-center">No se detectó ninguna seña</h2>)}
+      </div>
     </>
   )
 }
+
